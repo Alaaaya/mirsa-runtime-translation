@@ -12,3 +12,10 @@ Translation is guarded against recursive entry, bounded by input length and a bo
 fishhook is vendored at upstream aadc161ac3b80db07a9908851839a17ba63a9eb1 under BSD license. The write-protection call is page-aligned and restricted to the pointer's page, and writes are skipped on failure. Fishhook may not cover modern chained-fixup-only images. No symbol-inline hooking. Existing hooks from other libraries may conflict.
 
 Build on macOS with Xcode by running ./build.sh. The CI artifact contains the arm64 dylib, JSON and SHA256SUMS. Ad-hoc code signature must be replaced with the application's signing identity when injecting.
+
+Local build verification
+------------------------
+
+GitHub native macOS CI could not start because the owner's GitHub account reported failed payments/spending-limit restrictions. No simulator test was run. A real arm64 iOS Mach-O library was instead cross-compiled locally using clang/LLD 18 and the Theos iOS 16.5 SDK, with all warnings treated as errors. The Linux build explicitly adds a valid ad-hoc signature. Run ./build-linux.sh with SDK pointing to your SDK.
+
+Static tests validate the embedded table bytes, format specifiers and the dynamic iOS-version template. The optional pre-injected IPA preserves the original executable length and signature blob ranges, adds one load command only in verified zero-filled header padding, and needs re-signing. Original signature hashes are necessarily stale after injection. The new dylib's signature bounds and all IPA ZIP CRCs are checked; that does not establish launch compatibility.

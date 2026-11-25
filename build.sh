@@ -14,3 +14,11 @@ otool -L out/MirsaTranslate.dylib
 codesign --verify --strict out/MirsaTranslate.dylib
 cp runtime-table.json out/MirsaTranslations.json
 shasum -a 256 out/* > out/SHA256SUMS
+SIMSDK=$(xcrun --sdk iphonesimulator --show-sdk-path)
+ARCH=$(uname -m)
+xcrun clang -target "$ARCH-apple-ios17.0-simulator" -isysroot "$SIMSDK" -fobjc-arc -fblocks -O1 -dynamiclib RuntimeTranslate.m fishhook.c -framework UIKit -framework Foundation -framework CoreText -o /tmp/MirsaTranslate-sim.dylib
+xcrun clang -target "$ARCH-apple-ios17.0-simulator" -isysroot "$SIMSDK" -fobjc-arc -fblocks Smoke.m -framework UIKit -framework Foundation -framework CoreText -o /tmp/MirsaTranslate-smoke
+DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys;d=json.load(sys.stdin);print(next(x["udid"] for group in d["devices"].values() for x in group if "iPhone" in x["name"]))')
+xcrun simctl boot "$DEVICE" || true
+xcrun simctl bootstatus "$DEVICE" -b
+xcrun simctl spawn "$DEVICE" /tmp/MirsaTranslate-smoke /tmp/MirsaTranslate-sim.dylib

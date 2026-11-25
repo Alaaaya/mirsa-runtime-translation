@@ -25,12 +25,13 @@ static NSString *Translate(NSString *s) {
      if ([exact isKindOfClass:NSString.class]) result=exact;
      else {
        // Only explicitly reviewed fragments, longest first; no arbitrary machine translation.
-       for (NSString *key in pieceKeys) {
-         if ([result containsString:key]) result=[result stringByReplacingOccurrencesOfString:key withString:pieces[key]];
-       }
+       // Full dynamic templates must run before fragment replacement.
        for (NSDictionary *r in rules) {
          NSRegularExpression *re=r[@"compiled"];
          result=[re stringByReplacingMatchesInString:result options:0 range:NSMakeRange(0,result.length) withTemplate:r[@"replacement"]];
+       }
+       if ([result isEqualToString:s]) for (NSString *key in pieceKeys) {
+         if ([result containsString:key]) result=[result stringByReplacingOccurrencesOfString:key withString:pieces[key]];
        }
      }
      [cache setObject:result forKey:s cost:s.length+result.length];
@@ -156,7 +157,7 @@ __attribute__((constructor)) static void Start(void) {
    table=[config[@"translations"] isKindOfClass:NSDictionary.class]?config[@"translations"]:@{};
    pieces=[config[@"substrings"] isKindOfClass:NSDictionary.class]?config[@"substrings"]:@{};
    NSMutableDictionary *safe=[NSMutableDictionary dictionary];
-   [pieces enumerateKeysAndObjectsUsingBlock:^(id k,id v,BOOL *stop){if([k isKindOfClass:NSString.class]&&[v isKindOfClass:NSString.class]&&[k length])safe[k]=v;}];
+   [pieces enumerateKeysAndObjectsUsingBlock:^(id k,id v,__unused BOOL *stop){if([k isKindOfClass:NSString.class]&&[v isKindOfClass:NSString.class]&&[k length])safe[k]=v;}];
    pieces=[safe copy];
    pieceKeys=[[pieces allKeys] sortedArrayUsingComparator:^NSComparisonResult(NSString*a,NSString*b){return a.length>b.length?NSOrderedAscending:a.length<b.length?NSOrderedDescending:NSOrderedSame;}];
    NSMutableArray *rr=[NSMutableArray array];
@@ -164,7 +165,8 @@ __attribute__((constructor)) static void Start(void) {
      if(![r isKindOfClass:NSDictionary.class]||![r[@"pattern"] isKindOfClass:NSString.class]||![r[@"replacement"] isKindOfClass:NSString.class])continue;
      NSRegularExpression *re=[NSRegularExpression regularExpressionWithPattern:r[@"pattern"] options:0 error:NULL];
      if(re)[rr addObject:@{@"compiled":re,@"replacement":r[@"replacement"]}];
-   } rules=[rr copy];
+   }
+   rules=[rr copy];
    cache=[NSCache new];cache.countLimit=2048;cache.totalCostLimit=1024*1024;
    enabled=YES;
    HookString(UILabel.class,@selector(setText:));HookAttr(UILabel.class,@selector(setAttributedText:));

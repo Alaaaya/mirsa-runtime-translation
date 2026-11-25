@@ -1,2 +1,6 @@
 Table.h
 out/
+iPhoneOS*.sdk/
+*.tar.xz
+*.log
+push_api.py
